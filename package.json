@@ -1,0 +1,23 @@
+{
+  "name": "ng-config-conventions",
+  "version": "0.1.0",
+  "description": "Automatically configures Angular applications by convention",
+  "main": "index.js",
+  "scripts": {
+    "test":  "./node_modules/.bin/jasmine JASMINE_CONFIG_PATH=jasmine.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johngully/ng-config-conventions.git"
+  },
+  "author": "John Gully",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/johngully/ng-config-conventions/issues"
+  },
+  "homepage": "https://github.com/johngully/ng-config-conventions#readme",
+  "devDependencies": {
+    "jasmine": "^2.4.1",
+    "rewire": "^2.5.1"
+  }
+}
