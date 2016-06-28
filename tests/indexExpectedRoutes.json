@@ -1,0 +1,20 @@
+[
+  {
+    "name": "feature-1",
+    "url": "feature1",
+    "controller": "feature1/feature1Controller.js",
+    "template": "feature1/feature1Template.html"
+  },
+  {
+    "name": "feature-3",
+    "url": "feature3",
+    "controller": "feature3/feature3Component.js",
+    "template": "feature3/feature3Template.html"
+  },
+  {
+    "name": "",
+    "url": "",
+    "controller": "testController.js",
+    "template": "testTemplate.html"
+  }
+]
