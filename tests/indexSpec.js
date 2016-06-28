@@ -6,7 +6,57 @@ const ngConfigConventions = rewire('../index.js');
 describe('ngConfigConventions', () => {
   it('should initialize', () => {
     expect(ngConfigConventions).toEqual(jasmine.any(Object));
+    expect(ngConfigConventions.generate).toEqual(jasmine.any(Function));
     expect(ngConfigConventions.generateRoutes).toEqual(jasmine.any(Function));
+  });
+
+  describe('File generation', () =>{
+    let root = './tests/fixtures';
+    let options;
+    let actualRoutes;
+    let fs = require('fs');
+
+
+    beforeEach(() => {
+      spyOn(console, 'warn');
+      mockWrite();
+      options = { root: root };
+    });
+
+    it('should generate a file with the configured routes', () => {
+      const expectedPath = 'tests/fixtures/routerConfigUiRouter.js';
+      ngConfigConventions.generate(options);
+      expect(fs.writeFileSync).toHaveBeenCalledWith(expectedPath, jasmine.anything());
+    });
+
+    it('should generate a router config for UI Router when the routerType is "uiRouter"', () => {
+      mockRead();
+      const expectedPath = './templates/routerConfigUiRouter.js';
+      options.routerType = 'uiRouter';
+      ngConfigConventions.generate(options);
+      expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
+      expect(fs.writeFileSync).toHaveBeenCalled();
+    });
+
+    it('should generate a router config for the Angular router when routerType is "ngRouter"', () => {
+      mockRead();
+      const expectedPath = './templates/routerConfigNgRouter.js';
+      options.routerType = 'ngRouter';
+      ngConfigConventions.generate(options);
+      expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
+      expect(fs.writeFileSync).toHaveBeenCalled();
+    });
+
+    function mockRead() {
+      spyOn(fs, 'readFileSync');
+      ngConfigConventions.__set__('fs', fs);
+      ngConfigConventions.generate(options);
+    }
+
+    function mockWrite() {
+      spyOn(fs, 'writeFileSync');
+      ngConfigConventions.__set__('fs', fs)
+    }
   });
 
   describe('Route creation', () => {

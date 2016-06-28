@@ -1,25 +1,47 @@
 'use strict'
 const _ = require('lodash');
+let fs = require('fs');
 const glob = require('glob');
 const path = require('path');
 
 const routeConventions = {
   root: './',
   component: '**/*(*Controller.js|*Component.js)',
-  template: '*.html'
+  template: '*.html',
+  routerType: 'uiRouter',
+  dest: './routerConfigUiRouter.js'
 };
 
 let options = {};
+
+function generate(optionsIn) {
+  options = _.defaultsDeep(optionsIn || {}, routeConventions);
+  generateRouterConfig(optionsIn);
+}
+
+function generateRouterConfig(optionsIn) {
+  const routes = generateRoutes(optionsIn);
+  const templateData = { routes };
+  const templatePath = getRouterConfigTemplate(options.routerType);
+  const renderedTemplate = generateTemplate(templatePath, templateData);
+  fs.writeFileSync(path.join(options.root, options.dest), renderedTemplate);
+}
+
+function generateTemplate(templatePath, data) {
+  const file = fs.readFileSync(templatePath);
+  const template = _.template(file);
+  return template(data);
+}
 
 function generateRoutes(optionsIn) {
   options = _.defaultsDeep(optionsIn || {}, routeConventions);
   const routeGlob = getGlobFromPath(options.root, options.component);
   const files = glob.sync(routeGlob);
-  const routes = generateRouteConfig(files, options);
+  const routes = generateRoute(files, options);
   return routes;
 }
 
-function generateRouteConfig(files) {
+function generateRoute(files) {
   // Create routes for each controller
   let routes = files.map((file) => {
     return {
@@ -39,6 +61,19 @@ function generateRouteConfig(files) {
   });
 
   return routes;
+}
+
+function getRouterConfigTemplate(routerType) {
+  let templatePath;
+  switch (routerType) {
+    case 'uiRouter':
+      templatePath = './templates/routerConfigUiRouter.js';
+      break;
+    case 'ngRouter':
+      templatePath = './templates/routerConfigNgRouter.js';
+      break;
+  }
+  return templatePath;
 }
 
 function getNameFromFile(file) {
@@ -88,6 +123,7 @@ function addSeperator(segment) {
 }
 
 const ngConfigConventions = {
+  generate,
   generateRoutes
 };
 
