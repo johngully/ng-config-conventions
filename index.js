@@ -9,22 +9,50 @@ const routeConventions = {
   component: '**/*(*Controller.js|*Component.js)',
   template: '*.html',
   routerType: 'uiRouter',
-  dest: './routerConfigUiRouter.js'
+  routerConfigDest: './routerConfigUiRouter.js',
+  importDest: './routerImports.js'
 };
 
 let options = {};
 
 function generate(optionsIn) {
-  options = _.defaultsDeep(optionsIn || {}, routeConventions);
-  generateRouterConfig(optionsIn);
+  setOptions(optionsIn);
+  ngConfigConventions.generateImportConfig(optionsIn);
+  ngConfigConventions.generateRouterConfig(optionsIn);
+}
+
+function generateImportConfig(optionsIn) {
+  setOptions(optionsIn);
+  const renderedTemplate = generateImports(optionsIn);
+  fs.writeFileSync(path.join(options.root, options.importDest), renderedTemplate);
+}
+
+function generateImports(optionsIn) {
+  setOptions(optionsIn);
+  const routes = generateRoutes(optionsIn);
+  const importStatements = getImportStatmentsFromRoutes(routes);
+  const templateData = { importStatements };
+  const templatePath = './templates/importConfigES2015.js';
+  const renderedTemplate = generateTemplate(templatePath, templateData);
+  return renderedTemplate;
+}
+
+function getImportStatmentsFromRoutes(routes) {
+  return routes.map(route => {
+    return {
+      variable: route.name,
+      path: route.controller || route.component
+    };
+  });
 }
 
 function generateRouterConfig(optionsIn) {
+  setOptions(optionsIn);
   const routes = generateRoutes(optionsIn);
   const templateData = { routes };
   const templatePath = getRouterConfigTemplate(options.routerType);
   const renderedTemplate = generateTemplate(templatePath, templateData);
-  fs.writeFileSync(path.join(options.root, options.dest), renderedTemplate);
+  fs.writeFileSync(path.join(options.root, options.routerConfigDest), renderedTemplate);
 }
 
 function generateTemplate(templatePath, data) {
@@ -34,7 +62,7 @@ function generateTemplate(templatePath, data) {
 }
 
 function generateRoutes(optionsIn) {
-  options = _.defaultsDeep(optionsIn || {}, routeConventions);
+  setOptions(optionsIn);
   const routeGlob = getGlobFromPath(options.root, options.component);
   const files = glob.sync(routeGlob);
   const routes = generateRoute(files, options);
@@ -122,9 +150,16 @@ function addSeperator(segment) {
   return segment;
 }
 
+function setOptions(optionsIn) {
+  options = _.defaultsDeep(optionsIn || {}, routeConventions);
+}
+
 const ngConfigConventions = {
   generate,
-  generateRoutes
+  generateImports,
+  generateImportConfig,
+  generateRoutes,
+  generateRouterConfig
 };
 
 module.exports = ngConfigConventions;

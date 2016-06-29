@@ -2,30 +2,53 @@
 const rewire = require('rewire');
 const _ = require('lodash');
 const ngConfigConventions = rewire('../index.js');
+const root = './tests/fixtures';
+let fs = require('fs');
+let options;
 
 describe('ngConfigConventions', () => {
+  beforeEach(() => {
+    spyOn(console, 'warn');
+    mockWrite();
+    options = { root: root };
+  });
+
   it('should initialize', () => {
     expect(ngConfigConventions).toEqual(jasmine.any(Object));
     expect(ngConfigConventions.generate).toEqual(jasmine.any(Function));
     expect(ngConfigConventions.generateRoutes).toEqual(jasmine.any(Function));
   });
 
-  describe('File generation', () =>{
-    let root = './tests/fixtures';
-    let options;
-    let actualRoutes;
-    let fs = require('fs');
+  describe('Generate', () => {
+    it('should default the option values', () => testSetOptions(ngConfigConventions.generate));
 
-
-    beforeEach(() => {
-      spyOn(console, 'warn');
-      mockWrite();
-      options = { root: root };
+    it('should generate both the import and router configs', () => {
+      spyOn(ngConfigConventions, 'generateImportConfig');
+      spyOn(ngConfigConventions, 'generateRouterConfig');
+      ngConfigConventions.generate();
+      expect(ngConfigConventions.generateImportConfig).toHaveBeenCalled();
+      expect(ngConfigConventions.generateRouterConfig).toHaveBeenCalled();
     });
+  });
+
+  describe('Import file generation', () => {
+    it('should default the option values', () => testSetOptions(ngConfigConventions.generateImports));
+
+    it('should generate a file that imports route scripts', () => {
+      mockRead();
+      const expectedPath = './templates/importConfigES2015.js';
+      ngConfigConventions.generateImports();
+      expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
+      expect(fs.writeFileSync).toHaveBeenCalled();
+    });
+  });
+
+  describe('Route file generation', () => {
+    it('should default the option values', () => testSetOptions(ngConfigConventions.generateRouterConfig));
 
     it('should generate a file with the configured routes', () => {
       const expectedPath = 'tests/fixtures/routerConfigUiRouter.js';
-      ngConfigConventions.generate(options);
+      ngConfigConventions.generateRouterConfig(options);
       expect(fs.writeFileSync).toHaveBeenCalledWith(expectedPath, jasmine.anything());
     });
 
@@ -33,7 +56,7 @@ describe('ngConfigConventions', () => {
       mockRead();
       const expectedPath = './templates/routerConfigUiRouter.js';
       options.routerType = 'uiRouter';
-      ngConfigConventions.generate(options);
+      ngConfigConventions.generateRouterConfig(options);
       expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
       expect(fs.writeFileSync).toHaveBeenCalled();
     });
@@ -42,33 +65,20 @@ describe('ngConfigConventions', () => {
       mockRead();
       const expectedPath = './templates/routerConfigNgRouter.js';
       options.routerType = 'ngRouter';
-      ngConfigConventions.generate(options);
+      ngConfigConventions.generateRouterConfig(options);
       expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
       expect(fs.writeFileSync).toHaveBeenCalled();
     });
-
-    function mockRead() {
-      spyOn(fs, 'readFileSync');
-      ngConfigConventions.__set__('fs', fs);
-      ngConfigConventions.generate(options);
-    }
-
-    function mockWrite() {
-      spyOn(fs, 'writeFileSync');
-      ngConfigConventions.__set__('fs', fs)
-    }
   });
 
   describe('Route creation', () => {
-    let root = './tests/fixtures';
-    let options;
     let actualRoutes;
 
     beforeEach(() => {
-      spyOn(console, 'warn');
-      options = { root: root };
       actualRoutes = ngConfigConventions.generateRoutes(options);
     });
+
+    it('should provide default option values', () => testSetOptions(ngConfigConventions.generateRoutes));
 
     it('should generate routes for controllers found by convention', () => {
       const expectedRoutes = require('./indexExpectedRoutes.json');
@@ -109,4 +119,22 @@ describe('ngConfigConventions', () => {
       return _.find(actualRoutes, route => route.name === name);
     }
   });
+
+  function testSetOptions(act) {
+    const expectedOptions = {};
+    const setOptions = jasmine.createSpy().and.callFake(ngConfigConventions.__get__('setOptions'));
+    ngConfigConventions.__set__('setOptions', setOptions);
+    act(expectedOptions);
+    expect(setOptions).toHaveBeenCalledWith(expectedOptions);
+  }
+  function mockRead() {
+    spyOn(fs, 'readFileSync');
+    ngConfigConventions.__set__('fs', fs);
+    ngConfigConventions.generate(options);
+  }
+
+  function mockWrite() {
+    spyOn(fs, 'writeFileSync');
+    ngConfigConventions.__set__('fs', fs)
+  }
 });
