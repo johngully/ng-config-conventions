@@ -32,7 +32,8 @@ function generateImports(optionsIn) {
   const routes = generateRoutes(optionsIn);
   const importStatements = getImportStatmentsFromRoutes(routes);
   const templateData = { importStatements };
-  const templatePath = './templates/importConfigES2015.js';
+  const templatePath = path.join(__dirname, './templates/importConfigES2015.js');
+  console.log(templatePath);
   const renderedTemplate = generateTemplate(templatePath, templateData);
   return renderedTemplate;
 }
@@ -101,7 +102,7 @@ function getRouterConfigTemplate(routerType) {
       templatePath = './templates/routerConfigNgRouter.js';
       break;
   }
-  return templatePath;
+  return path.join(__dirname, templatePath);
 }
 
 function getNameFromFile(file) {
