@@ -1,6 +1,7 @@
 'use strict';
 const rewire = require('rewire');
 const _ = require('lodash');
+const path = require('path');
 const ngConfigConventions = rewire('../index.js');
 const root = './tests/fixtures';
 let fs = require('fs');
@@ -36,10 +37,20 @@ describe('ngConfigConventions', () => {
 
     it('should generate a file that imports route scripts', () => {
       mockRead();
-      const expectedPath = './templates/importConfigES2015.js';
+      const expectedPath = getModulePathToPath('./templates/importConfigES2015.js');
       ngConfigConventions.generateImports();
       expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
       expect(fs.writeFileSync).toHaveBeenCalled();
+    });
+  });
+
+  describe('Import creation', () => {
+    it('should import the files used for routes', () => {
+      pending('To be implemented');
+    });
+
+    it('should name the import objects using camelCase', () => {
+      pending('To be implemented');
     });
   });
 
@@ -54,7 +65,7 @@ describe('ngConfigConventions', () => {
 
     it('should generate a router config for UI Router when the routerType is "uiRouter"', () => {
       mockRead();
-      const expectedPath = './templates/routerConfigUiRouter.js';
+      const expectedPath = getModulePathToPath('./templates/routerConfigUiRouter.js');
       options.routerType = 'uiRouter';
       ngConfigConventions.generateRouterConfig(options);
       expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
@@ -63,7 +74,7 @@ describe('ngConfigConventions', () => {
 
     it('should generate a router config for the Angular router when routerType is "ngRouter"', () => {
       mockRead();
-      const expectedPath = './templates/routerConfigNgRouter.js';
+      const expectedPath = getModulePathToPath('./templates/routerConfigNgRouter.js');
       options.routerType = 'ngRouter';
       ngConfigConventions.generateRouterConfig(options);
       expect(fs.readFileSync).toHaveBeenCalledWith(expectedPath);
@@ -86,7 +97,7 @@ describe('ngConfigConventions', () => {
     });
 
     it('should not generate a route if a template is missing', () => {
-      const name = 'feature-2';
+      const name = 'feature2';
       const actualRoute = getRoute(name);
       const routesMissingTemplate = _.includes(actualRoutes, route => route.template.length < 1);
       expect(routesMissingTemplate).toBeFalsy();
@@ -95,30 +106,72 @@ describe('ngConfigConventions', () => {
     });
 
     it('should use the first template if multiple are found', () => {
-      const name = 'feature-3';
-      const routesWithMultipleTemplates = getRoute('feature-3');
-      expect(routesWithMultipleTemplates.template).toContain('feature3Template.html');
+      const name = 'feature3';
+      const routesWithMultipleTemplates = getRoute(name);
+      expect(routesWithMultipleTemplates.templateUrl).toContain('feature3Template.html');
       expect(console.warn).toHaveBeenCalledWith(`Multiple templates found for: "${name}".  By convention only a single template should be found.  Using the first match and continuing execution.`);
     });
 
-    it('should set the "name" using kebabCase', () => {
-      const expectedName = _.kebabCase('feature1');
+    it('should set the "name" using camelCase', () => {
+      const expectedName = _.camelCase('feature1');
       const actualName = actualRoutes[0].name;
       expect(actualName).toBe(expectedName);
     });
 
     it('should not include the root path in the url, or file paths', () => {
-      const actualRoute = getRoute('feature-1');
+      const actualRoute = getRoute('feature1');
       expect(actualRoute.url).not.toContain(root);
       expect(actualRoute.template).not.toContain(root);
       expect(actualRoute.controller).not.toContain(root);
       expect(actualRoute.component).not.toContain(root);
     });
 
+    it('should modify the url if it starts with urlBase', () => {
+      let testOptions = {
+        root: './tests',
+        urlBase: '/fixtures'
+      }
+      actualRoutes = ngConfigConventions.generateRoutes(testOptions);
+      const actualRoute = getRoute('fixturesFeature1');
+      expect(actualRoute.url).not.toContain(testOptions.urlBase);
+    });
+
+    it('should not modify the url if it does not start with the urlBase', () => {
+      let testOptions = {
+        root: './tests',
+        urlBase: '/file/not/in/this/path'
+      }
+      actualRoutes = ngConfigConventions.generateRoutes(testOptions);
+      const actualRoute = getRoute('fixturesFeature1');
+      expect(actualRoute.url).toContain('/fixtures');
+    });
+
+    it('should not modify the url if the urlBase is not configured', () => {
+      let testOptions = {
+        root: './tests',
+        urlBase: ''
+      }
+      actualRoutes = ngConfigConventions.generateRoutes(testOptions);
+      const actualRoute = getRoute('fixturesFeature1');
+      expect(actualRoute.url).toContain('/fixtures');
+    });
+
+    it('should set the "controller" property for controllers', () => {
+      pending('To be implemented');
+    });
+
+    it('should set "component" property for components', () => {
+      pending('To be implemented');
+    });
+
     function getRoute(name) {
       return _.find(actualRoutes, route => route.name === name);
     }
   });
+
+  function getModulePathToPath(location) {
+    return path.join(__dirname, '../', location)
+  }
 
   function testSetOptions(act) {
     const expectedOptions = {};
@@ -127,6 +180,7 @@ describe('ngConfigConventions', () => {
     act(expectedOptions);
     expect(setOptions).toHaveBeenCalledWith(expectedOptions);
   }
+
   function mockRead() {
     spyOn(fs, 'readFileSync');
     ngConfigConventions.__set__('fs', fs);

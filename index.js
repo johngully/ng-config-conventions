@@ -6,6 +6,7 @@ const path = require('path');
 
 const routeConventions = {
   root: './',
+  urlBase: '/tests/fixtures/',
   component: '**/*(*Controller.js|*Component.js)',
   template: '*.html',
   routerType: 'uiRouter',
@@ -29,20 +30,34 @@ function generateImportConfig(optionsIn) {
 
 function generateImports(optionsIn) {
   setOptions(optionsIn);
-  const routes = generateRoutes(optionsIn);
-  const importStatements = getImportStatmentsFromRoutes(routes);
+  const routeGlob = getGlobFromPath(options.root, options.component);
+  const files = glob.sync(routeGlob);
+  const importStatements = generateImportStatementsFromFiles(files)
+  // const routes = generateRoutes(optionsIn);
+  // const importStatements = getImportStatmentsFromRoutes(routes);
   const templateData = { importStatements };
   const templatePath = path.join(__dirname, './templates/importConfigES2015.js');
-  console.log(templatePath);
   const renderedTemplate = generateTemplate(templatePath, templateData);
   return renderedTemplate;
+}
+
+function generateImportStatementsFromFiles(files) {
+  let statements = files.map(file => {
+    return {
+      variable: getNameFromFile(file),
+      path: '/' + getComponentPathFromFile(file)
+    };
+  });
+
+  // console.log(statements);
+  return statements;
 }
 
 function getImportStatmentsFromRoutes(routes) {
   return routes.map(route => {
     return {
       variable: route.name,
-      path: route.controller || route.component
+      path: '/' + route.controllerUrl || route.componentUrl
     };
   });
 }
@@ -66,27 +81,27 @@ function generateRoutes(optionsIn) {
   setOptions(optionsIn);
   const routeGlob = getGlobFromPath(options.root, options.component);
   const files = glob.sync(routeGlob);
-  const routes = generateRoute(files, options);
+  const routes = generateRoutesFromFiles(files, options);
   return routes;
 }
 
-function generateRoute(files) {
+function generateRoutesFromFiles(files) {
   // Create routes for each controller
   let routes = files.map((file) => {
     return {
       name: getNameFromFile(file),
       url: getUrlFromFile(file),
-      controller: getComponentPathFromFile(file),
-      template: getTemplatePathFromFile(file)
+      controller: getControllerFromFile(file),
+      templateUrl: getTemplatePathFromFile(file)
     };
   });
 
   // Remove any routes that have missing templates
   routes = routes.filter((route) => {
-    if (!route.template) {
+    if (!route.templateUrl) {
       console.warn(`No templates found for: "${route.name}".  The file will not be included in the routes.`);
     }
-    return !!route.template;
+    return !!route.templateUrl;
   });
 
   return routes;
@@ -106,12 +121,27 @@ function getRouterConfigTemplate(routerType) {
 }
 
 function getNameFromFile(file) {
-  let url = getUrlFromFile(file);
-  return _.kebabCase(url); // TODO: Use an override function from the options object
+  let url = path.relative(options.root, path.dirname(file));;
+  let name = _.camelCase(url);
+
+  // If no name is found then call back to the file name
+  if (!name) {
+    name = path.basename(file, path.extname(file)).replace(/(Component|Controller)/, '');
+  }
+  return name; // TODO: Use an override function from the options object
 }
 
 function getUrlFromFile(file) {
-  return path.relative(options.root, path.dirname(file));
+  let url = '/' + path.relative(options.root, path.dirname(file));
+  if (options.urlBase && _.startsWith(url, options.urlBase)) {
+    url = '/' + path.relative(options.urlBase, url);
+  }
+  return url;
+}
+
+function getControllerFromFile(file) {
+  var name = getNameFromFile(file);
+  return `${name}Controller as ${name}Controller`;
 }
 
 function getComponentPathFromFile(file) {
